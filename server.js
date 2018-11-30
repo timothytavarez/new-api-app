@@ -3,6 +3,8 @@ const azure = require('azure-storage');
 const hapi = require('hapi');
 const dotenv = require('dotenv').config();
 
+const tableService = azure.createTableService(process.env.CUSTOMCONNSTR_cosmosTables);
+
 const config = {
     port: process.env.PORT || 3000,
     host: process.env.host || "localhost",
@@ -17,7 +19,7 @@ const server = new hapi.Server(config);
 
 const init = async () => {
     await server.start();
-    console.log('Im working! Maybe!');
+    console.log('Im HAPI!');
 };
 
 server.route({
@@ -28,9 +30,32 @@ server.route({
     }
 });
 
+server.route({
+    method: 'GET',
+    path: '/dogs',
+    handler: function (request, h) {
+
+        const query = new azure.TableQuery()
+            .where("PartitionKey eq 'dogData'");
+
+        const promise = new Promise((resolve, reject) => {
+
+            tableService.queryEntities('dogs', query, null, (err, result, response) => {
+                if (err) {
+                    reject(err)
+                }
+    
+                resolve(result);
+            })
+        });
+
+        return promise;
+    }
+});
+
 process.on('unhandledRejection', function (err) {
     console.log(err);
-    process.exit(1);
+ 
 });
 
 init();
